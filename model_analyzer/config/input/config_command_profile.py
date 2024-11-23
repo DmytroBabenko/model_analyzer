@@ -664,8 +664,42 @@ class ConfigCommandProfile(ConfigCommand):
                 description="A weighting used to bias the model when determining the best configuration",
             )
         )
-
         model_config_fields = self._get_model_config_fields()
+
+        ensemble_profile_models_sceme = ConfigObject(
+            required=False,
+            schema={
+                "*": ConfigObject(
+                    schema={
+                        "cpu_only": ConfigPrimitive(bool),
+                        "parameters": ConfigObject(
+                            schema={
+                                "batch_sizes": ConfigListNumeric(type_=int),
+                                "concurrency": ConfigListNumeric(type_=int),
+                                "request_rate": ConfigListNumeric(type_=int),
+                            }
+                        ),
+                        # "objectives": objectives_scheme,
+                        # "constraints": constraints_scheme,
+                        # "weighting": ConfigPrimitive(type_=int),
+                        "model_config_parameters": model_config_fields,
+                        # "perf_analyzer_flags": perf_analyzer_flags_scheme,
+                        # "genai_perf_flags": genai_perf_flags_scheme,
+                        # "triton_server_flags": triton_server_flags_scheme,
+                        # "triton_server_environment": triton_server_environment_scheme,
+                        # "triton_docker_args": triton_docker_args_scheme,
+                    }
+                )
+            },
+        )
+        self._add_config(
+            ConfigField(
+                "ensemble_profile_models",
+                field_type=ensemble_profile_models_sceme,
+                description="ensemble_profile_models_sceme.",
+            )
+        )
+
         profile_model_scheme = ConfigObject(
             required=True,
             schema={
@@ -690,6 +724,7 @@ class ConfigCommandProfile(ConfigCommand):
                         "triton_server_flags": triton_server_flags_scheme,
                         "triton_server_environment": triton_server_environment_scheme,
                         "triton_docker_args": triton_docker_args_scheme,
+                        "ensemble_profile_models": ensemble_profile_models_sceme,
                     }
                 )
             },
@@ -1686,6 +1721,9 @@ class ConfigCommandProfile(ConfigCommand):
             # Transfer model config parameters directly
             if model.model_config_parameters():
                 new_model["model_config_parameters"] = model.model_config_parameters()
+
+            if model.ensemble_profile_models():
+                new_model["ensemble_profile_models"] = model.ensemble_profile_models()
 
             new_profile_models[model.model_name()] = new_model
 

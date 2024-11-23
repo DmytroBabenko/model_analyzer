@@ -37,6 +37,7 @@ class ConfigModelProfileSpec:
         triton_server_flags=None,
         triton_server_environment=None,
         triton_docker_args=None,
+        ensemble_profile_models=None,
     ):
         """
         Parameters
@@ -86,6 +87,8 @@ class ConfigModelProfileSpec:
         self._triton_server_flags = triton_server_flags
         self._triton_server_environment = triton_server_environment
         self._triton_docker_args = triton_docker_args
+
+        self._ensemble_profile_models = ensemble_profile_models
 
     def cpu_only(self):
         """
@@ -206,6 +209,9 @@ class ConfigModelProfileSpec:
         """
 
         return self._triton_docker_args
+
+    def ensemble_profile_models(self):
+        return self._ensemble_profile_models
 
     @staticmethod
     def model_object_to_config_model_profile_spec(value):

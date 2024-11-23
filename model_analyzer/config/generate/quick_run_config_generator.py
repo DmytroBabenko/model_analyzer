@@ -13,8 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import logging
+from itertools import product
 from sys import maxsize
 from typing import Dict, Generator, List, Optional, Tuple, Union
 
@@ -116,6 +116,16 @@ class QuickRunConfigGenerator(ConfigGeneratorInterface):
 
         self._done = False
 
+        models_combinations = []
+        for model in self._composing_models:
+            model_combos = GeneratorUtils.generate_combinations(
+                model.model_config_parameters()
+            )
+            models_combinations.append(model_combos)
+
+        self._all_combinations = list(product(*models_combinations))
+        self._curr_combo_index = 0
+
     def _is_done(self) -> bool:
         return self._done
 
@@ -142,12 +152,15 @@ class QuickRunConfigGenerator(ConfigGeneratorInterface):
         Determine self._coordinate_to_measure, which is what is used to
         create the next RunConfig
         """
-        if self._should_step_back():
-            self._take_step_back()
-        elif self._neighborhood.enough_coordinates_initialized():
-            self._take_step()
-        else:
-            self._pick_coordinate_to_initialize()
+        self._curr_combo_index += 1
+        if self._curr_combo_index == len(self._all_combinations):
+            self._done = True
+        # if self._should_step_back():
+        #     self._take_step_back()
+        # elif self._neighborhood.enough_coordinates_initialized():
+        #     self._take_step()
+        # else:
+        #     self._pick_coordinate_to_initialize()
 
     def set_last_results(
         self, measurements: List[Optional[RunConfigMeasurement]]
@@ -436,32 +449,37 @@ class QuickRunConfigGenerator(ConfigGeneratorInterface):
             self._coordinate_to_measure, dimension_index
         )
 
-        model_config_params = deepcopy(model.model_config_parameters())
-        if model_config_params:
-            model_config_params.pop("max_batch_size", None)
+        # model_config_params = deepcopy(model.model_config_parameters())
+        # param_combos = GeneratorUtils.generate_combinations(model_config_params) if model_config_params else {}
+        # if model_config_params:
+        #     model_config_params.pop("max_batch_size", None)
 
-            # This is guaranteed to only generate one combination (check is in config_command)
-            param_combos = GeneratorUtils.generate_combinations(model_config_params)
-            assert len(param_combos) == 1
+        #     # This is guaranteed to only generate one combination (check is in config_command)
+        #     param_combos = GeneratorUtils.generate_combinations(model_config_params)
+        #     assert len(param_combos) == 1
 
-            param_combo = param_combos[0]
-        else:
-            param_combo = {}
+        #     param_combo = param_combos[0]
+        # else:
+        #     param_combo = {}
 
-        kind = "KIND_CPU" if model.cpu_only() else "KIND_GPU"
-        instance_count = self._calculate_instance_count(dimension_values)
+        param_combo = self._all_combinations[self._curr_combo_index][dimension_index]
 
-        param_combo["instance_group"] = [
-            {
-                "count": instance_count,
-                "kind": kind,
-            }
-        ]
+        if "instance_group" not in param_combo:
+            kind = "KIND_CPU" if model.cpu_only() else "KIND_GPU"
+            instance_count = self._calculate_instance_count(dimension_values)
 
-        if "max_batch_size" in dimension_values:
-            param_combo["max_batch_size"] = self._calculate_model_batch_size(
-                dimension_values
-            )
+            param_combo["instance_group"] = [
+                {
+                    "count": instance_count,
+                    "kind": kind,
+                }
+            ]
+
+        if "max_batch_size" not in param_combo:
+            if "max_batch_size" in dimension_values:
+                param_combo["max_batch_size"] = self._calculate_model_batch_size(
+                    dimension_values
+                )
 
         if model.supports_dynamic_batching():
             param_combo["dynamic_batching"] = {}

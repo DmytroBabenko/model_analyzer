@@ -313,13 +313,18 @@ class RunConfigGeneratorFactory:
         if not model_config.is_ensemble():
             return []
 
-        ensemble_composing_model_names = model_config.get_ensemble_composing_models()
+        ensemble_composing_model_specs = [
+            ConfigModelProfileSpec(model_name=model_name, **model_properties)
+            for model_name, model_properties in model.ensemble_profile_models().items()
+        ]
 
-        ensemble_composing_model_specs = (
-            ConfigModelProfileSpec.model_list_to_config_model_profile_spec(
-                ensemble_composing_model_names
-            )
-        )
+        # ensemble_composing_model_names = model_config.get_ensemble_composing_models()
+
+        # ensemble_composing_model_specs = (
+        #     ConfigModelProfileSpec.model_list_to_config_model_profile_spec(
+        #         ensemble_composing_model_names
+        #     )
+        # )
 
         ensemble_composing_model_configs = [
             ModelProfileSpec(ensemble_composing_model_spec, config, client, gpus)
